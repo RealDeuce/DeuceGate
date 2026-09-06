@@ -65,14 +65,24 @@ bool
 dg_file_exists(const char *path)
 {
 	struct stat st;
+#ifdef _WIN32
+	return path != NULL && stat(path, &st) == 0 &&
+	    (st.st_mode & _S_IFMT) == _S_IFREG;
+#else
 	return path != NULL && stat(path, &st) == 0 && S_ISREG(st.st_mode);
+#endif
 }
 
 bool
 dg_dir_exists(const char *path)
 {
 	struct stat st;
+#ifdef _WIN32
+	return path != NULL && stat(path, &st) == 0 &&
+	    (st.st_mode & _S_IFMT) == _S_IFDIR;
+#else
 	return path != NULL && stat(path, &st) == 0 && S_ISDIR(st.st_mode);
+#endif
 }
 
 bool

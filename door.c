@@ -12,13 +12,18 @@
 #include "str_list.h"
 
 #ifdef _WIN32
+#include <direct.h>
 #include <windows.h>
+#define DG_RMDIR _rmdir
+#define DG_STRNICMP _strnicmp
 #else
 #include <fcntl.h>
 #include <signal.h>
 #include <sys/select.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#define DG_RMDIR rmdir
+#define DG_STRNICMP strnicmp
 #if defined(__FreeBSD__)
 #include <libutil.h>
 #elif defined(__APPLE__) || defined(__NetBSD__) || defined(__OpenBSD__)
@@ -80,9 +85,9 @@ door_language(const dg_client_t *client)
 static bool
 is_door_environment_entry(const char *entry)
 {
-	return strnicmp(entry, DG_BBSDEV_ENV, sizeof(DG_BBSDEV_ENV) - 1) == 0
-	    || strnicmp(entry, DG_DOOR_ENCODING_ENV, sizeof(DG_DOOR_ENCODING_ENV) - 1) == 0
-	    || strnicmp(entry, DG_DOOR_LANGUAGE_ENV, sizeof(DG_DOOR_LANGUAGE_ENV) - 1) == 0;
+	return DG_STRNICMP(entry, DG_BBSDEV_ENV, sizeof(DG_BBSDEV_ENV) - 1) == 0
+	    || DG_STRNICMP(entry, DG_DOOR_ENCODING_ENV, sizeof(DG_DOOR_ENCODING_ENV) - 1) == 0
+	    || DG_STRNICMP(entry, DG_DOOR_LANGUAGE_ENV, sizeof(DG_DOOR_LANGUAGE_ENV) - 1) == 0;
 }
 
 static char *
@@ -360,7 +365,7 @@ cleanup_node(const dg_client_t *client)
 	snprintf(name, sizeof(name), "dorinfo%u.def", client->node);
 	if (node_path(client, name, path, sizeof(path))) remove(path);
 	snprintf(name, sizeof(name), "node%u", client->node);
-	if (dg_path_join(node, sizeof(node), client->config->root, name)) rmdir(node);
+	if (dg_path_join(node, sizeof(node), client->config->root, name)) DG_RMDIR(node);
 }
 
 static bool
@@ -502,7 +507,7 @@ dg_expand_command(const dg_client_t *client, SOCKET handle, bool shell, char *co
 			iniCloseFile(fp);
 			keys = ini != NULL ? iniGetKeyList(ini, "USER") : NULL;
 			for (size_t i = 0; ok && keys != NULL && keys[i] != NULL; i++) {
-				if (strnicmp(keys[i], "AdditionalInfo_", 15) == 0) {
+				if (DG_STRNICMP(keys[i], "AdditionalInfo_", 15) == 0) {
 					char macro[DG_MACRO_KEY_MAX], var[DG_MACRO_KEY_MAX], raw[DG_PATH_MAX];
 					snprintf(macro, sizeof(macro), "***%s", keys[i] + 15);
 					snprintf(var, sizeof(var), "DEUCEGATE_INFO_%s", keys[i] + 15);

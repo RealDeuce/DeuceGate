@@ -214,6 +214,8 @@ test_drop_files(void)
 	snprintf(root, sizeof(root), "/tmp/deucegate-chain-%ld", (long)getpid());
 #endif
 	CHECK(mkpath(root) == 0 || dg_dir_exists(root));
+	CHECK(dg_dir_exists(root));
+	CHECK(!dg_file_exists(root));
 	snprintf(cfg.root, sizeof(cfg.root), "%s", root);
 	strcpy(cfg.bbs_name, "Drop Test");
 	strcpy(cfg.sysop_first_name, "Test");
@@ -231,6 +233,8 @@ test_drop_files(void)
 	strcpy(client.user.alias, "Chain User");
 	CHECK(dg_create_drop_files(&client, "socket", (SOCKET)123, DG_UTF8, node_dir, sizeof(node_dir)));
 	CHECK(dg_path_join(path, sizeof(path), node_dir, "chain.txt"));
+	CHECK(dg_file_exists(path));
+	CHECK(!dg_dir_exists(path));
 	CHECK(dg_read_file(path, &data, &len));
 	if (data != NULL) {
 		CHECK(nth_line(data, len, 4, line, sizeof(line)) && strcmp(line, "") == 0);
