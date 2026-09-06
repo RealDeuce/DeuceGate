@@ -40,6 +40,13 @@ cmake -S . -B build \
 `DEUCEGATE_XPDEV_GIT_TAG` and `DEUCEGATE_DEUCESSH_GIT_TAG` select the fetched
 branches, tags, or commits; both default to `main`.
 
+## Continuous integration and releases
+
+GitHub Actions builds and tests DeuceGate on Linux, macOS, Windows with
+MinGW-w64, and Windows with MSVC. Each successful job publishes a packaged
+executable as a workflow artifact. When a GitHub Release is published, the
+four platform archives are also attached to that release automatically.
+
 ## Synchronet upstream files
 
 The top-level `utf8_codepages.c/.h` and `base64.c/.h` are tracked snapshots of
