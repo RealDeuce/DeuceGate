@@ -18,18 +18,20 @@ part of DeuceGate work. If a DeuceGate task exposes a required sibling-project
 change, report it separately and leave it unmodified; that change requires its
 own separately scoped task.
 
-This project lives beside Synchronet's shared libraries and intentionally uses
-their source trees:
+External libraries are obtained through CMake FetchContent. Local checkouts can
+be selected with the standard `FETCHCONTENT_SOURCE_DIR_<NAME>` cache variables:
 
-- `../xpdev` supplies INI parsing, sockets, threads, filesystem wrappers, and
-  other portability support.
-- `../ssh` is DeuceSSH and is the only remote transport implementation.
-- `../conio/utf8_codepages.c` supplies the CP437 conversion tables. Do not add a
-  dependency on `../encode` for character-set conversion.
-- `../encode/base64.c` is used only for Base64 encoding and decoding.
-- `../sbbs3/answer.cpp` is the reference for terminal/UTF-8 detection behavior.
-- `../sbbs3/xtrn_sec.cpp` is the reference for drop-file field ordering,
-  especially `CHAIN.TXT`.
+- `xpdev` supplies INI parsing, sockets, threads, filesystem wrappers, and
+  other portability support. The usual local override is `../xpdev`.
+- DeuceSSH is the only remote transport implementation. The usual local
+  override is `../deucessh`.
+- `utf8_codepages.c/.h` and `base64.c/.h` are tracked copies from Synchronet.
+  Do not edit them as DeuceGate-owned code; update them with
+  `.github/scripts/sync-synchronet-files.sh`.
+- Synchronet's `src/sbbs3/answer.cpp` is the reference for terminal/UTF-8
+  detection behavior.
+- Synchronet's `src/sbbs3/xtrn_sec.cpp` is the reference for drop-file field
+  ordering, especially `CHAIN.TXT`.
 
 Sibling source trees may be inspected for APIs and reference behavior, but must
 not be changed during DeuceGate work.
@@ -127,5 +129,5 @@ copy of `tests/fixture`: verify signed-key TOFU enrollment, a subsequent login,
 menu display, and clean logoff. Add a legacy-password live check when changing
 password authentication.
 
-Warnings emitted solely by sibling xpdev/conio sources may be reported, but new
-warnings from DeuceGate sources should be fixed.
+Warnings emitted solely by fetched xpdev or synchronized support sources may be
+reported, but new warnings from DeuceGate-owned sources should be fixed.

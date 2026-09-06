@@ -6,10 +6,12 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS ON)
 
 option(DEUCEGATE_BUILD_TESTS "Build DeuceGate tests" ON)
-set(DEUCEGATE_BOTAN_ROOT "" CACHE PATH
-    "Optional Botan installation root (useful when cross-compiling without target pkg-config metadata)")
-
-include(../build/SynchronetCrypto.cmake)
+set(DEUCEGATE_XPDEV_GIT_TAG
+    "main"
+    CACHE STRING "xpdev Git revision to fetch")
+set(DEUCEGATE_DEUCESSH_GIT_TAG
+    "main"
+    CACHE STRING "DeuceSSH Git revision to fetch")
 
 # xpdev's audio modules are unrelated to this daemon and pull in optional GUI/audio SDKs.
 set(WITHOUT_OSS ON CACHE BOOL "" FORCE)
@@ -21,65 +23,21 @@ set(WITHOUT_PIPEWIRE ON CACHE BOOL "" FORCE)
 set(WITHOUT_COREAUDIO ON CACHE BOOL "" FORCE)
 set(DEUCESSH_BUILD_STATIC ON CACHE BOOL "" FORCE)
 set(DEUCESSH_BUILD_SHARED OFF CACHE BOOL "" FORCE)
-set(WITHOUT_CRYPTO ON CACHE BOOL "" FORCE)
-set(WITHOUT_DEUCESSH OFF CACHE BOOL "" FORCE)
 
-if(DEUCEGATE_BOTAN_ROOT)
-    enable_language(CXX)
-    if(NOT EXISTS "${DEUCEGATE_BOTAN_ROOT}/lib/libbotan-3.a")
-        message(FATAL_ERROR "DEUCEGATE_BOTAN_ROOT does not contain lib/libbotan-3.a")
-    endif()
-    set(_botan_build_header
-        "${DEUCEGATE_BOTAN_ROOT}/include/botan-3/botan/build.h")
-    if(NOT EXISTS "${_botan_build_header}")
-        message(FATAL_ERROR
-            "DEUCEGATE_BOTAN_ROOT does not contain Botan's build.h")
-    endif()
-    file(READ "${_botan_build_header}" _botan_build_contents)
-    foreach(_component MAJOR MINOR PATCH)
-        string(REGEX MATCH
-            "#define[ \t]+BOTAN_VERSION_${_component}[ \t]+([0-9]+)"
-            _botan_version_match "${_botan_build_contents}")
-        if(NOT _botan_version_match)
-            message(FATAL_ERROR
-                "Cannot determine Botan version from ${_botan_build_header}")
-        endif()
-        set(_botan_version_${_component} "${CMAKE_MATCH_1}")
-    endforeach()
-    set(_botan_version
-        "${_botan_version_MAJOR}.${_botan_version_MINOR}.${_botan_version_PATCH}")
-    if(_botan_version VERSION_LESS SYNCHRONET_BOTAN_MIN_VERSION)
-        message(FATAL_ERROR
-            "DEUCEGATE_BOTAN_ROOT contains Botan ${_botan_version}; "
-            "Botan ${SYNCHRONET_BOTAN_MIN_VERSION}+ is required")
-    endif()
-    add_library(deucegate_botan STATIC IMPORTED GLOBAL)
-    set_target_properties(deucegate_botan PROPERTIES
-        IMPORTED_LOCATION "${DEUCEGATE_BOTAN_ROOT}/lib/libbotan-3.a"
-        INTERFACE_INCLUDE_DIRECTORIES "${DEUCEGATE_BOTAN_ROOT}/include/botan-3"
-        IMPORTED_LINK_INTERFACE_LANGUAGES CXX)
-    set(BOTAN3_VENDORED_TARGET deucegate_botan CACHE STRING "" FORCE)
-    set(BOTAN3_VENDORED_BUILD_TARGET "" CACHE INTERNAL "" FORCE)
-    set(DEUCESSH_CRYPTO_BACKEND Botan CACHE STRING "" FORCE)
-    set(DEUCESSH_BOTAN_MIN_VERSION "${SYNCHRONET_BOTAN_MIN_VERSION}"
-        CACHE INTERNAL "" FORCE)
-else()
-    # The monorepo keeps 3rdp beside src; the flattened source artifact keeps
-    # it beside deucegate.  Point the shared selector at whichever layout is
-    # present so both builds use the same vendored release.
-    foreach(_botan_archive
-            "${CMAKE_CURRENT_SOURCE_DIR}/../../3rdp/dist/Botan.tar.xz"
-            "${CMAKE_CURRENT_SOURCE_DIR}/../3rdp/dist/Botan.tar.xz")
-        if(EXISTS "${_botan_archive}")
-            set(SYNCHRONET_BOTAN_ARCHIVE "${_botan_archive}")
-            break()
-        endif()
-    endforeach()
-    synchronet_configure_crypto()
-endif()
-
-add_subdirectory(../xpdev xpdev-build)
-add_subdirectory(../ssh deucessh-build)
+include(FetchContent)
+FetchContent_Declare(xpdev
+    GIT_REPOSITORY https://github.com/RealDeuce/xpdev.git
+    GIT_TAG ${DEUCEGATE_XPDEV_GIT_TAG}
+    GIT_SHALLOW TRUE
+    GIT_PROGRESS TRUE
+)
+FetchContent_Declare(deucessh
+    GIT_REPOSITORY https://github.com/RealDeuce/DeuceSSH.git
+    GIT_TAG ${DEUCEGATE_DEUCESSH_GIT_TAG}
+    GIT_SHALLOW TRUE
+    GIT_PROGRESS TRUE
+)
+FetchContent_MakeAvailable(xpdev deucessh)
 
 set(DEUCEGATE_SOURCES
     charset.c
@@ -91,21 +49,15 @@ set(DEUCEGATE_SOURCES
     terminal.c
     user.c
     util.c
-    ../conio/utf8_codepages.c
-    ../encode/base64.c
+    utf8_codepages.c
+    base64.c
 )
 
 add_library(deucegate_lib STATIC ${DEUCEGATE_SOURCES})
 target_include_directories(deucegate_lib PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ../conio
-    ../encode
 )
 target_link_libraries(deucegate_lib PUBLIC xpdev deucessh::static)
-if(BOTAN3_VENDORED_TARGET)
-    # DeuceSSH deliberately leaves a vendored crypto target for its parent to export.
-    target_link_libraries(deucegate_lib PUBLIC ${BOTAN3_VENDORED_TARGET})
-endif()
 
 if(WIN32)
     target_link_libraries(deucegate_lib PUBLIC ws2_32 advapi32 userenv)

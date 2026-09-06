@@ -2,9 +2,15 @@
 
 DeuceGate is a C17, SSH-native replacement for Rick Parrish's GameSrv door server. It reads an existing GameSrv directory in place and uses DeuceSSH for all remote connections.
 
+This standalone repository retains the DeuceGate commits originally made under
+`src/deucegate` in the Synchronet source tree. The path-filtered commits keep
+their original authors, dates, messages, and ancestry.
+
 ## Build
 
-DeuceGate uses the sibling `xpdev`, `ssh`, `conio`, and `encode` sources from the Synchronet tree.
+DeuceGate fetches `xpdev` and DeuceSSH from their GitHub repositories while
+configuring. It includes tracked copies of Synchronet's CP437 and Base64 source
+files so a checkout contains everything else needed to build.
 
 ```sh
 cmake -S . -B build
@@ -12,9 +18,34 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-DeuceGate and SyncTERM use the same crypto selection policy: system Botan 3.13 or newer is preferred, then system OpenSSL 3.0 or newer, and the bundled Botan source is built when neither is available. Use `-DCRYPTO_BACKEND=OpenSSL` to select OpenSSL explicitly, `-DUSE_VENDORED_BOTAN=1` to force the bundled Botan build, or `-DUSE_VENDORED_BOTAN=0` to opt out of it.
+DeuceSSH selects system Botan 3.13 or newer when available, then system OpenSSL
+3.0 or newer. Use `-DDEUCESSH_CRYPTO_BACKEND=OpenSSL` or
+`-DDEUCESSH_CRYPTO_BACKEND=Botan` to select one explicitly.
 
-For a MinGW cross-build with a Botan 3.13-or-newer target installation that should not be discovered through the host's `pkg-config`, pass `-DCMAKE_SYSTEM_NAME=Windows`, the MinGW C/C++/resource compilers, and `-DDEUCEGATE_BOTAN_ROOT=/path/to/windows/botan`.
+For development against local dependency checkouts, use CMake's standard
+FetchContent overrides. For example, this repository's usual sibling layout is:
+
+```sh
+cmake -S . -B build \
+  -DFETCHCONTENT_SOURCE_DIR_XPDEV=../xpdev \
+  -DFETCHCONTENT_SOURCE_DIR_DEUCESSH=../deucessh
+```
+
+`DEUCEGATE_XPDEV_GIT_TAG` and `DEUCEGATE_DEUCESSH_GIT_TAG` select the fetched
+branches, tags, or commits; both default to `main`.
+
+## Synchronet upstream files
+
+The top-level `utf8_codepages.c/.h` and `base64.c/.h` are tracked snapshots of
+their counterparts in `SynchronetBBS/sbbs`. The upstream sync workflow runs
+every six hours and can also be started manually. It fetches the four files,
+commits changes to this repository, and pushes them to the default branch.
+
+Run the same update locally from a clean checkout with:
+
+```sh
+./.github/scripts/sync-synchronet-files.sh
+```
 
 ## Run
 
@@ -111,7 +142,9 @@ Native socket doors receive a new local plaintext socket handle in `DOOR32.SYS`,
 
 ## Terminal handling
 
-The caller is classified with Synchronet's CPR/BOM terminal probe. CP437 content is converted with `conio/utf8_codepages.c`. A UTF-8 stream is used internally, so all four caller/door combinations work:
+The caller is classified with Synchronet's CPR/BOM terminal probe. CP437
+content is converted with the tracked `utf8_codepages.c` snapshot. A UTF-8
+stream is used internally, so all four caller/door combinations work:
 
 - CP437 caller and CP437 door
 - CP437 caller and UTF-8 door
