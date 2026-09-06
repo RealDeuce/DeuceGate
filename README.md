@@ -6,6 +6,12 @@ This standalone repository retains the DeuceGate commits originally made under
 `src/deucegate` in the Synchronet source tree. The path-filtered commits keep
 their original authors, dates, messages, and ancestry.
 
+## License
+
+DeuceGate is available under the [BSD 2-Clause License](LICENSE). Synchronized
+files that retain different upstream terms are documented in
+[`THIRD_PARTY.md`](THIRD_PARTY.md).
+
 ## Build
 
 DeuceGate fetches `xpdev` and DeuceSSH from their GitHub repositories while
